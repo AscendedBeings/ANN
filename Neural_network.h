@@ -16,6 +16,7 @@ public:
 	Active_type type = sigmond;
 	void Set_type(const Active_type parameter);
 	Matrix Active(const Matrix &parameter);
+	Matrix Derivative(const Matrix &parameter);
 };
 
 void Active_function::Set_type(const Active_type parameter)
@@ -37,6 +38,25 @@ Matrix Active_function::Active(const Matrix &parameter)
 				temp.element[i][j] = (double)1 / ((double)1 + exp(-parameter.element[i][j]));
 			}
 		}
+		break;
+	default:
+		break;
+	}
+	return temp;
+}
+
+Matrix Active_function::Derivative(const Matrix &parameter)
+{
+	Matrix temp;
+	Matrix f_value;
+	Matrix one_subs;
+	temp = parameter;
+	switch (type)
+	{
+	case sigmond:
+		f_value = Active(temp);
+		one_subs = 1.0 - f_value;
+		temp = f_value.multi_element(one_subs);
 		break;
 	default:
 		break;
@@ -187,6 +207,7 @@ void Neural_network::back_update()
 	Matrix Deviation_weight;
 	Matrix Deviation_node;
 	Layers_deviation[layers_of_network - 1] = Layers_node[layers_of_network] - Layers_node[layers_of_network - 1];
+	Layers_deviation[layers_of_network - 1] = Layers_deviation[layers_of_network - 1] * AF.Derivative(Layers_node[layers_of_network - 1]);
 	int weight_signal = Weight.size() - 1;
 	for (int i = layers_of_network - 2; i >= 0; i--)
 	{
@@ -194,7 +215,7 @@ void Neural_network::back_update()
 		switch (AF.type)
 		{
 		case sigmond:
-			Deviation_node = Deviation_node.multi_element(Layers_node[i].multi_element((1 - Layers_node[i])));
+			Deviation_node = Deviation_node.multi_element(AF.Derivative(Layers_node[i]));
 			Deviation_weight = Deviation_node.Transpose()*Layers_node[i + 1];
 			Weight[weight_signal] = Weight[weight_signal] - learning_rate * Deviation_weight;
 			Layers_bias[i] = Layers_bias[i] - learning_rate * Deviation_node;
